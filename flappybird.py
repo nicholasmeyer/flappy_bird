@@ -104,15 +104,15 @@ class FlappyEnvironment():
             # self.reset()
         if self.dead:
             self.flapping = 'dead'
-        t = list(self.top_coordinates)
-        b = list(self.bottom_coordinates)
-        vector_observations = np.array(sum([list(self.coordinates), list((
-            t[0], t[3], t[0] + t[2], t[3])), list((b[0], b[3], b[0] + b[2], b[3]))], []))
+        vector_observations = np.array(
+            sum([self.get_coordinates(self.coordinates, self.top_coordinates, self.bottom_coordinates),
+                 self.get_coordinates_top(self.top_coordinates),
+                 self.get_coordinates_bottom(self.bottom_coordinates)], []))
         if not self.dead:
             reward = 0.1 + self.counter
             local_done = False
         else:
-            reward = -10
+            reward = -100
             local_done = True
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
 
@@ -138,21 +138,38 @@ class FlappyEnvironment():
         self.dead = False
         self.offset = random.randint(-110, 110)
         pygame.display.set_caption('Score {}'.format(self.counter))
-
-        t = list(self.top_coordinates)
-        b = list(self.bottom_coordinates)
-        vector_observations = np.array(sum([list(self.coordinates), list((
-            t[0], t[3], t[0] + t[2], t[3])), list((b[0], b[3], b[0] + b[2], b[3]))], []))
+        vector_observations = np.array(
+            sum([self.get_coordinates(self.coordinates, self.top_coordinates, self.bottom_coordinates),
+                 self.get_coordinates_top(self.top_coordinates),
+                 self.get_coordinates_bottom(self.bottom_coordinates)], []))
         reward = 0
         local_done = False
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         return env_info
 
+    def get_coordinates(self, bird_rect, top_rect, bottom_rect):
+        dist = bird_rect.right - top_rect.right
+        dist_above = bird_rect.top - top_rect.bottom
+        dist_below = bird_rect.bottom - bottom_rect.top
+        return list((bird_rect.left, bird_rect.bottom, bird_rect.right,
+                     bird_rect.bottom, bird_rect.left, bird_rect.top,
+                     bird_rect.right, bird_rect.top, dist, dist_above, dist_below))
+
+    def get_coordinates_top(self, rect):
+        return list((rect.left, rect.bottom, rect.right,
+                     rect.bottom))
+
+    def get_coordinates_bottom(self, rect):
+        return list((rect.left, rect.top, rect.right,
+                     rect.top))
+
     def action_size(self):
+        # TODO: hardcoded for now. change later
         return 2
 
     def state_size(self):
-        return 12
+        # TODO: hardcoded for now. change later
+        return 19
 
     def close(self):
         sys.exit()
