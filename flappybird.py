@@ -7,7 +7,7 @@ import numpy as np
 
 # game screen width and height
 WIDTH, HEIGHT = (400, 708)
-
+RED = (255,   0,   0)
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Score {}'.format(0))
@@ -104,15 +104,13 @@ class FlappyEnvironment():
             # self.reset()
         if self.dead:
             self.flapping = 'dead'
-        vector_observations = np.array(
-            sum([self.get_coordinates(self.coordinates, self.top_coordinates, self.bottom_coordinates),
-                 self.get_coordinates_top(self.top_coordinates),
-                 self.get_coordinates_bottom(self.bottom_coordinates)], []))
+        # collect information to train network
+        vector_observations = self.get_state()
         if not self.dead:
             reward = 0.1 + self.counter
             local_done = False
         else:
-            reward = -100
+            reward = -10
             local_done = True
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
 
@@ -124,7 +122,6 @@ class FlappyEnvironment():
         screen.blit(pole_bottom, (self.x, 360 + self.gap - self.offset))
         pygame.display.set_caption('Score {}'.format(self.counter))
         pygame.display.update()
-
         return env_info
 
     def reset(self):
@@ -137,31 +134,20 @@ class FlappyEnvironment():
         self.counter = 0
         self.dead = False
         self.offset = random.randint(-110, 110)
+        # reset information regarding environment state
         pygame.display.set_caption('Score {}'.format(self.counter))
-        vector_observations = np.array(
-            sum([self.get_coordinates(self.coordinates, self.top_coordinates, self.bottom_coordinates),
-                 self.get_coordinates_top(self.top_coordinates),
-                 self.get_coordinates_bottom(self.bottom_coordinates)], []))
+        vector_observations = self.get_state()
         reward = 0
         local_done = False
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         return env_info
 
-    def get_coordinates(self, bird_rect, top_rect, bottom_rect):
-        dist = bird_rect.right - top_rect.right
-        dist_above = bird_rect.top - top_rect.bottom
-        dist_below = bird_rect.bottom - bottom_rect.top
-        return list((bird_rect.left, bird_rect.bottom, bird_rect.right,
-                     bird_rect.bottom, bird_rect.left, bird_rect.top,
-                     bird_rect.right, bird_rect.top, dist, dist_above, dist_below))
-
-    def get_coordinates_top(self, rect):
-        return list((rect.left, rect.bottom, rect.right,
-                     rect.bottom))
-
-    def get_coordinates_bottom(self, rect):
-        return list((rect.left, rect.top, rect.right,
-                     rect.top))
+    def get_state(self):
+        screen_surface = pygame.display.get_surface().convert_alpha()
+        screen_surface = pygame.transform.scale(screen_surface, (80, 80))
+        screen_surface = pygame.surfarray.array3d(screen_surface)
+        screen_surface = np.dot(screen_surface[..., :3], [0.299, 0.587, 0.114])
+        return screen_surface
 
     def action_size(self):
         # TODO: hardcoded for now. change later
@@ -169,7 +155,7 @@ class FlappyEnvironment():
 
     def state_size(self):
         # TODO: hardcoded for now. change later
-        return 19
+        return (80, 80)
 
     def close(self):
         sys.exit()

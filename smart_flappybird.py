@@ -69,13 +69,16 @@ def dqn(n_episodes,
     eps = eps_start                    # initialize epsilon
     for i_episode in range(1, n_episodes + 1):
         env_info = env.reset()
-        state = env_info.vector_observations
         score = 0
-
-        for t in range(max_t):
+        state = np.zeros((4, 80, 80))
+        next_state = np.zeros((4, 80, 80))
+        frame = env_info.vector_observations
+        state[0, :, :] = frame
+        for t in range(1, max_t + 1):
             action = agent.act(state, eps)
             env_info = env.step(action)
-            next_state = env_info.vector_observations
+            next_frame = env_info.vector_observations
+            next_state[t % 4, :, :] = next_frame
             reward = env_info.rewards
             done = env_info.local_done
             agent.step(state, action, reward, next_state, done)
@@ -91,7 +94,7 @@ def dqn(n_episodes,
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(
                 i_episode, np.mean(scores_window)))
-        if np.mean(scores_window) >= 100.0:
+        if np.mean(scores_window) >= 1000.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(
                 i_episode - 100, np.mean(scores_window)))
             torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
@@ -142,9 +145,9 @@ if __name__ == "__main__":
     parser.add_argument('--seed', metavar='', type=int,
                         default=0, help='seed for stochastic variables')
     parser.add_argument('--buffer_size', metavar='', type=int,
-                        default=int(1e10), help='replay buffer size')
+                        default=int(1e5), help='replay buffer size')
     parser.add_argument('--batch_size', metavar='', type=int,
-                        default=64, help='minibatch size')
+                        default=128, help='minibatch size')
     parser.add_argument('--gamma', metavar='', type=float,
                         default=0.99, help='discount factor')
     parser.add_argument('--tau', metavar='', type=float,
@@ -152,7 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', metavar='', type=float,
                         default=5e-4, help='learning rate')
     parser.add_argument('--update_every', metavar='', type=int,
-                        default=10, help='how often to update the network')
+                        default=4, help='how often to update the network')
     parser.add_argument('--train_test', metavar='', type=int,
                         default=0, help='0 to train and 1 to test agent')
     args = parser.parse_args()

@@ -106,7 +106,10 @@ class Agent():
             next_states).gather(1, best_actions)
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
         # Get expected Q values from local model
+        print(actions.shape)
         Q_expected = self.qnetwork_local(states).gather(1, actions)
+        print(Q_expected.shape)
+        print(Q_targets.shape)
         # Compute loss
         loss = F.mse_loss(Q_expected, Q_targets)
         # Minimize the loss
@@ -161,18 +164,22 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-
-        states = torch.from_numpy(
-            np.vstack([e.state for e in experiences if e is not None])).float().to(device)
+        states = np.zeros((len(experiences), 4, 80, 80))
+        next_states = np.zeros((len(experiences), 4, 80, 80))
+        for i, e in enumerate(experiences):
+            if e is not None:
+                states[i, :, :, :] = e.state
+        states = torch.from_numpy(states).float().to(device)
         actions = torch.from_numpy(
             np.vstack([e.action for e in experiences if e is not None])).long().to(device)
         rewards = torch.from_numpy(
             np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
-        next_states = torch.from_numpy(np.vstack(
-            [e.next_state for e in experiences if e is not None])).float().to(device)
+        for i, e in enumerate(experiences):
+            if e is not None:
+                next_states[i, :, :, :] = e.next_state
+        next_states = torch.from_numpy(next_states).float().to(device)
         dones = torch.from_numpy(np.vstack(
             [e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-
         return (states, actions, rewards, next_states, dones)
 
     def __len__(self):
