@@ -18,6 +18,8 @@ action_size = env.action_size()
 # state_size is the dimension of the state space
 state_size = env.state_size()
 
+import matplotlib.pyplot as plt
+
 
 def dqn(n_episodes,
         max_t,
@@ -73,12 +75,20 @@ def dqn(n_episodes,
         state = np.zeros((4, 80, 80))
         next_state = np.zeros((4, 80, 80))
         frame = env_info.vector_observations
-        state[0, :, :] = frame
-        for t in range(1, max_t + 1):
+        frames = deque(maxlen=max_t)
+        frames.append(frame)
+        state[:, :, :] = np.tile(frame, (4, 1, 1))
+        for t in range(max_t):
             action = agent.act(state, eps)
             env_info = env.step(action)
             next_frame = env_info.vector_observations
-            next_state[t % 4, :, :] = next_frame
+            frames.append(next_frame)
+            if t < 4:
+                for j in range(t + 1, 4):
+                    next_state[j, :, :] = next_frame
+            else:
+                for k in range(t - 3, t + 1):
+                    next_state[k - t + 3, :, :] = list(frames)[k]
             reward = env_info.rewards
             done = env_info.local_done
             agent.step(state, action, reward, next_state, done)
@@ -105,7 +115,8 @@ def dqn(n_episodes,
     ax = fig.add_subplot(111)
     ax.grid()
     ax.plot(np.arange(len(scores)), scores)
-    ax.set(xlabel="Episode #", ylabel="'Score", title="Double Deep Q Network")
+    ax.set(xlabel="Episode #", ylabel="'Score",
+           title="Double Deep Q Network")
     fig.savefig("DoubleDeepQNetwork.pdf")
 
 
@@ -153,7 +164,7 @@ if __name__ == "__main__":
     parser.add_argument('--tau', metavar='', type=float,
                         default=1e-3, help='for soft update of target parameters')
     parser.add_argument('--lr', metavar='', type=float,
-                        default=5e-4, help='learning rate')
+                        default=25e-5, help='learning rate')
     parser.add_argument('--update_every', metavar='', type=int,
                         default=4, help='how often to update the network')
     parser.add_argument('--train_test', metavar='', type=int,

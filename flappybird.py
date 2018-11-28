@@ -41,7 +41,7 @@ class FlappyEnvironment():
     def __init__(self):
         # attributes for the flappy bird
         self.flapping = 'no_flap'
-        self.y = 50
+        self.y = 350
         self.floating_time = 0
         self.jump_size = 10
         self.gravity = 5
@@ -85,7 +85,7 @@ class FlappyEnvironment():
         self.coordinates[1] = self.y
 
         # constrols movement of the poles
-        self.x -= 2
+        self.x -= 5
         if self.x < -80:
             self.x = 400
             self.counter += 1
@@ -104,24 +104,18 @@ class FlappyEnvironment():
             # self.reset()
         if self.dead:
             self.flapping = 'dead'
+
         # collect information to train network
         vector_observations = self.get_state()
         if not self.dead:
-            reward = 0.1 + self.counter
+            reward = 1
             local_done = False
         else:
-            reward = -10
+            reward = -100
             local_done = True
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
-
         # handle game visual updates
-        screen.fill((255, 255, 255))
-        screen.blit(background, (0, 0))
-        screen.blit(bird_states[self.flapping], (70, self.y))
-        screen.blit(pole_top, (self.x, 0 - self.gap - self.offset))
-        screen.blit(pole_bottom, (self.x, 360 + self.gap - self.offset))
-        pygame.display.set_caption('Score {}'.format(self.counter))
-        pygame.display.update()
+        self.display()
         return env_info
 
     def reset(self):
@@ -129,18 +123,28 @@ class FlappyEnvironment():
         Method to reset the game state
         """
         self.x = 400
-        self.y = 50
+        self.y = 350
         self.gravity = 5
         self.counter = 0
         self.dead = False
         self.offset = random.randint(-110, 110)
         # reset information regarding environment state
         pygame.display.set_caption('Score {}'.format(self.counter))
+        self.display()
         vector_observations = self.get_state()
-        reward = 0
+        reward = 1
         local_done = False
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         return env_info
+
+    def display(self):
+        screen.fill((255, 255, 255))
+        screen.blit(background, (0, 0))
+        screen.blit(bird_states[self.flapping], (70, self.y))
+        screen.blit(pole_top, (self.x, 0 - self.gap - self.offset))
+        screen.blit(pole_bottom, (self.x, 360 + self.gap - self.offset))
+        pygame.display.set_caption('Score {}'.format(self.counter))
+        pygame.display.update()
 
     def get_state(self):
         screen_surface = pygame.display.get_surface().convert_alpha()

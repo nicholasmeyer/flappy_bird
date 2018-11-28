@@ -100,16 +100,13 @@ class Agent():
         #---------------------Double Q learning------------------------ #
         # Get the predicted best actions (for next states) from local model
         best_actions = self.qnetwork_local.forward(
-            next_states).detach().max(1)[1].unsqueeze(1)
+            next_states).detach().squeeze(1).max(1)[1].unsqueeze(1)
         #  evaluate predicted actions using target model
         Q_targets_next = self.qnetwork_target(
-            next_states).gather(1, best_actions)
+            next_states).squeeze(1).gather(1, best_actions)
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
         # Get expected Q values from local model
-        print(actions.shape)
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
-        print(Q_expected.shape)
-        print(Q_targets.shape)
+        Q_expected = self.qnetwork_local(states).squeeze(1).gather(1, actions)
         # Compute loss
         loss = F.mse_loss(Q_expected, Q_targets)
         # Minimize the loss

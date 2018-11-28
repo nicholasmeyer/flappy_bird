@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class QNetwork(nn.Module):
     """Actor (Policy) Model"""
 
-    def __init__(self, state_size, action_size, seed, fc1_units=256):
+    def __init__(self, state_size, action_size, seed, fc1_units=256, fc2_units=128):
         """Initialize parameters and build model.
         Params
         ======
@@ -44,21 +44,15 @@ class QNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2),
         )
         self.fc1 = nn.Linear(256, fc1_units)
-        self.fc2 = nn.Linear(fc1_units, action_size)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
 
     def forward(self, state):
         """Build a network that maps state to action values."""
-        # print(state.shape)
         x = self.conv1(state)
-        # print(x.shape)
         x = self.conv2(x)
-        # print(x.shape)
         x = self.conv3(x)
-        #  print(x.shape)
         x = x.view(-1, 1, 256)
-        # print(x.shape)
         x = F.relu(self.fc1(x))
-        # print(x.shape)
-        x = self.fc2(x)
-        # print(x.shape)
-        return x
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
