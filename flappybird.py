@@ -5,6 +5,8 @@ import random
 import pygame
 import numpy as np
 
+from flappybird_utils import preprocess_frame
+
 # game screen width and height
 WIDTH, HEIGHT = (400, 708)
 RED = (255,   0,   0)
@@ -20,6 +22,8 @@ bird_states = {
 }
 pole_top = pygame.image.load("assets/top.png").convert_alpha()
 pole_bottom = pygame.image.load("assets/bottom.png").convert_alpha()
+
+import matplotlib.pyplot as plt
 
 
 class EnvironmentInfo():
@@ -48,7 +52,7 @@ class FlappyEnvironment():
         self.dead = False
         self.coordinates = pygame.Rect(65, self.y, 50, 50)
         # attributes for the poles
-        self.gap = 130
+        self.gap = 150
         self.x = 400
         self.offset = random.randint(-110, 110)
         self.top_coordinates = pygame.Rect(
@@ -85,7 +89,7 @@ class FlappyEnvironment():
         self.coordinates[1] = self.y
 
         # constrols movement of the poles
-        self.x -= 5
+        self.x -= 2
         if self.x < -80:
             self.x = 400
             self.counter += 1
@@ -108,10 +112,13 @@ class FlappyEnvironment():
         # collect information to train network
         vector_observations = self.get_state()
         if not self.dead:
-            reward = 1
+            if self.counter == 0:
+                reward = 0.1
+            else:
+                reward = 1
             local_done = False
         else:
-            reward = -100
+            reward = -1
             local_done = True
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         # handle game visual updates
@@ -132,13 +139,13 @@ class FlappyEnvironment():
         pygame.display.set_caption('Score {}'.format(self.counter))
         self.display()
         vector_observations = self.get_state()
-        reward = 1
+        reward = 0
         local_done = False
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         return env_info
 
     def display(self):
-        screen.fill((255, 255, 255))
+        screen.fill((0, 0, 0))
         screen.blit(background, (0, 0))
         screen.blit(bird_states[self.flapping], (70, self.y))
         screen.blit(pole_top, (self.x, 0 - self.gap - self.offset))
@@ -147,11 +154,10 @@ class FlappyEnvironment():
         pygame.display.update()
 
     def get_state(self):
-        screen_surface = pygame.display.get_surface().convert_alpha()
-        screen_surface = pygame.transform.scale(screen_surface, (80, 80))
-        screen_surface = pygame.surfarray.array3d(screen_surface)
-        screen_surface = np.dot(screen_surface[..., :3], [0.299, 0.587, 0.114])
-        return screen_surface
+        frame = pygame.display.get_surface().convert_alpha()
+        frame = pygame.surfarray.array3d(frame)
+        frame = preprocess_frame(frame)
+        return frame
 
     def action_size(self):
         # TODO: hardcoded for now. change later
