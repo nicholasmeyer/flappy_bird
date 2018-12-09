@@ -18,6 +18,8 @@ action_size = env.action_size()
 # state_size is the dimension of the state space
 state_size = env.state_size()
 
+import matplotlib.pyplot as plt
+
 
 def dqn(n_episodes,
         max_t,
@@ -64,6 +66,8 @@ def dqn(n_episodes,
                   tau,
                   lr,
                   update_every)
+    if os.path.isfile('checkpoint.pth'):
+        agent.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start                    # initialize epsilon
@@ -73,21 +77,23 @@ def dqn(n_episodes,
         state = np.zeros((4, 80, 80))
         next_state = np.zeros((4, 80, 80))
         frame = env_info.vector_observations
+        # keep track of frame for an episode
         frames = deque(maxlen=max_t)
-        frames.append(frame)
-        state[:, :, :] = np.tile(frame, (4, 1, 1))
-        state = next_state
+        # take 4 random steps
+        for i in range(8):
+            action = np.random.choice([0, 1])
+            env_info = env.step(action)
+            frame = env_info.vector_observations
+            frames.append(frame)
+        state = np.stack([list(frames)[k]
+                          for k in range(0, 4)], axis=0)
         for t in range(max_t):
             action = agent.act(state, eps)
             env_info = env.step(action)
             next_frame = env_info.vector_observations
             frames.append(next_frame)
-            if t < 4:
-                for j in range(t + 1, 4):
-                    next_state[j, :, :] = next_frame
-            else:
-                for k in range(t - 3, t + 1):
-                    next_state[k - t + 3, :, :] = list(frames)[k]
+            next_state = np.stack([list(frames)[k]
+                                   for k in range(t + 4, t + 8)], axis=0)
             reward = env_info.rewards
             done = env_info.local_done
             agent.step(state, action, reward, next_state, done)
@@ -98,7 +104,7 @@ def dqn(n_episodes,
         scores_window.append(score)       # save most recent score
         scores.append(score)              # save most recent score
         # eps = max(eps_end, eps_decay * eps)  # decrease epsilon
-        eps -= (eps_start - eps_end) / 3000000
+        eps -= (eps_start - eps_end) / 100000
         if eps == eps_end:
             eps = 0.001
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(
@@ -106,6 +112,7 @@ def dqn(n_episodes,
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(
                 i_episode, np.mean(scores_window)))
+            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
         if np.mean(scores_window) >= 1000.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(
                 i_episode - 100, np.mean(scores_window)))
@@ -152,13 +159,13 @@ if __name__ == "__main__":
     parser.add_argument('--eps_start', metavar='', type=float, default=0.1,
                         help='starting value of epsilon, for epsilon-greedy action selection')
     parser.add_argument('--eps_end', metavar='', type=float,
-                        default=0.0001, help='minimum value of epsilon')
+                        default=0.001, help='minimum value of epsilon')
     parser.add_argument('--eps_decay', metavar='', type=float, default=0.995,
                         help='multiplicative factor (per episode) for decreasing epsilon')
     parser.add_argument('--seed', metavar='', type=int,
                         default=0, help='seed for stochastic variables')
     parser.add_argument('--buffer_size', metavar='', type=int,
-                        default=int(1e4), help='replay buffer size')
+                        default=int(1e6), help='replay buffer size')
     parser.add_argument('--batch_size', metavar='', type=int,
                         default=32, help='minibatch size')
     parser.add_argument('--gamma', metavar='', type=float,

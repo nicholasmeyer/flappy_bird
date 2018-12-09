@@ -9,6 +9,11 @@ from flappybird_utils import preprocess_frame
 
 # game screen width and height
 WIDTH, HEIGHT = (400, 708)
+ACTION_SIZE = 2
+STATE_SIZE = (80, 80)
+TERMINAL_REWARD = -5
+ACHIEVEMENT_REWARD = 1
+NON_TERMINAL_REWARD = 0.1
 RED = (255,   0,   0)
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -23,12 +28,10 @@ bird_states = {
 pole_top = pygame.image.load("assets/top.png").convert_alpha()
 pole_bottom = pygame.image.load("assets/bottom.png").convert_alpha()
 
-import matplotlib.pyplot as plt
-
 
 class EnvironmentInfo():
     """
-    Class that handles all environment information
+    Stores all environment information that is needed to learn
     """
 
     def __init__(self, vector_observations, rewards, local_done):
@@ -39,7 +42,7 @@ class EnvironmentInfo():
 
 class FlappyEnvironment():
     """
-    Class that creates the environment for Flappy Bird
+    Creates the environment for Flappy Bird
     """
 
     def __init__(self):
@@ -60,22 +63,23 @@ class FlappyEnvironment():
         self.bottom_coordinates = pygame.Rect(
             self.x, 360 + self.gap - self.offset + 10, pole_bottom.get_width() - 10, pole_bottom.get_height())
         # game score
-        self.counter = 0
+        self.game_score = 0
         # initialise rendering
         pygame.font.init()
         font = pygame.font.SysFont("Arial", 50)
+        self.add = False
 
     def step(self, action):
+        reward = 0
+        local_done = False
         clock.tick(60)
         if self.floating_time < 12 and not self.dead:
             self.flapping = 'no_flap'
-
         if action == 1 and not self.dead:
             self.floating_time = 17
             self.gravity = 5
             self.jump_size = 10
             self.flapping = 'flap_up'
-
         # controls movement of the bird
         if self.floating_time < 5 and not self.dead:
             self.flapping = 'flap_down'
@@ -87,13 +91,13 @@ class FlappyEnvironment():
             self.y += self.gravity
             self.gravity += 0.2
         self.coordinates[1] = self.y
-
         # constrols movement of the poles
         self.x -= 2
         if self.x < -80:
             self.x = 400
-            self.counter += 1
+            self.game_score += 1
             self.offset = random.randint(-110, 110)
+            reward = ACHIEVEMENT_REWARD
         self.top_coordinates = pygame.Rect(
             self.x, 0 - self.gap - self.offset - 10, pole_top.get_width() - 10, pole_top.get_height())
         self.bottom_coordinates = pygame.Rect(
@@ -108,17 +112,12 @@ class FlappyEnvironment():
             # self.reset()
         if self.dead:
             self.flapping = 'dead'
-
         # collect information to train network
         vector_observations = self.get_state()
-        if not self.dead:
-            if self.counter == 0:
-                reward = 0.1
-            else:
-                reward = 1
-            local_done = False
-        else:
-            reward = -1
+        if not self.dead and not reward:
+            reward = NON_TERMINAL_REWARD
+        elif not reward:
+            reward = TERMINAL_REWARD
             local_done = True
         env_info = EnvironmentInfo(vector_observations, reward, local_done)
         # handle game visual updates
@@ -132,11 +131,11 @@ class FlappyEnvironment():
         self.x = 400
         self.y = 350
         self.gravity = 5
-        self.counter = 0
+        self.game_score = 0
         self.dead = False
         self.offset = random.randint(-110, 110)
         # reset information regarding environment state
-        pygame.display.set_caption('Score {}'.format(self.counter))
+        pygame.display.set_caption('Score {}'.format(self.game_score))
         self.display()
         vector_observations = self.get_state()
         reward = 0
@@ -150,22 +149,20 @@ class FlappyEnvironment():
         screen.blit(bird_states[self.flapping], (70, self.y))
         screen.blit(pole_top, (self.x, 0 - self.gap - self.offset))
         screen.blit(pole_bottom, (self.x, 360 + self.gap - self.offset))
-        pygame.display.set_caption('Score {}'.format(self.counter))
+        pygame.display.set_caption('Score {}'.format(self.game_score))
         pygame.display.update()
 
     def get_state(self):
         frame = pygame.display.get_surface().convert_alpha()
         frame = pygame.surfarray.array3d(frame)
-        frame = preprocess_frame(frame)
+        frame = preprocess_frame(frame, self.y)
         return frame
 
     def action_size(self):
-        # TODO: hardcoded for now. change later
-        return 2
+        return ACTION_SIZE
 
     def state_size(self):
-        # TODO: hardcoded for now. change later
-        return (80, 80)
+        return STATE_SIZE
 
     def close(self):
         sys.exit()
