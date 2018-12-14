@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import time
+import sys
 import os.path
 import argparse
 from collections import deque
@@ -8,7 +8,6 @@ from dqn_agent import Agent
 
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 from flappybird import FlappyEnvironment
 
 # initialize environment
@@ -80,7 +79,7 @@ def dqn(n_episodes,
         # keep track of frame for an episode
         frames = deque(maxlen=max_t)
         # take 4 random steps
-        for i in range(8):
+        for i in range(4):
             action = np.random.choice([0, 1])
             env_info = env.step(action)
             frame = env_info.vector_observations
@@ -93,7 +92,7 @@ def dqn(n_episodes,
             next_frame = env_info.vector_observations
             frames.append(next_frame)
             next_state = np.stack([list(frames)[k]
-                                   for k in range(t + 4, t + 8)], axis=0)
+                                   for k in range(t, t + 4)], axis=0)
             reward = env_info.rewards
             done = env_info.local_done
             agent.step(state, action, reward, next_state, done)
@@ -103,10 +102,7 @@ def dqn(n_episodes,
                 break
         scores_window.append(score)       # save most recent score
         scores.append(score)              # save most recent score
-        # eps = max(eps_end, eps_decay * eps)  # decrease epsilon
-        eps -= (eps_start - eps_end) / 100000
-        if eps == eps_end:
-            eps = 0.001
+        eps = max(eps_end, eps_decay * eps)  # decrease epsilon
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(
             i_episode, np.mean(scores_window)), end="")
         if i_episode % 100 == 0:
@@ -148,6 +144,7 @@ def trained_agent():
             break
     env.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Flappy Bird DQN')
@@ -156,11 +153,11 @@ if __name__ == "__main__":
                         default=int(1e6), help='maximum number of training episodes')
     parser.add_argument('--max_t', metavar='', type=int, default=int(1e6),
                         help='maximum number of timesteps per episode')
-    parser.add_argument('--eps_start', metavar='', type=float, default=0.1,
+    parser.add_argument('--eps_start', metavar='', type=float, default=1.0,
                         help='starting value of epsilon, for epsilon-greedy action selection')
     parser.add_argument('--eps_end', metavar='', type=float,
-                        default=0.001, help='minimum value of epsilon')
-    parser.add_argument('--eps_decay', metavar='', type=float, default=0.995,
+                        default=0.01, help='minimum value of epsilon')
+    parser.add_argument('--eps_decay', metavar='', type=float, default=0.95,
                         help='multiplicative factor (per episode) for decreasing epsilon')
     parser.add_argument('--seed', metavar='', type=int,
                         default=0, help='seed for stochastic variables')
@@ -175,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', metavar='', type=float,
                         default=1e-6, help='learning rate')
     parser.add_argument('--update_every', metavar='', type=int,
-                        default=4, help='how often to update the network')
+                        default=1000, help='how often to update the network')
     parser.add_argument('--train_test', metavar='', type=int,
                         default=0, help='0 to train and 1 to test agent')
     args = parser.parse_args()
