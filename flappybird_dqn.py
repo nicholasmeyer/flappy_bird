@@ -17,7 +17,7 @@ action_size = env.action_size()
 # state_size is the dimension of the state space
 state_size = env.state_size()
 
-import matplotlib.pyplot as plt
+np.random.seed(0)
 
 
 def dqn(n_episodes,
@@ -71,11 +71,10 @@ def dqn(n_episodes,
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start                    # initialize epsilon
     for i_episode in range(1, n_episodes + 1):
-        env_info = env.reset()
+        env.reset()
         score = 0
-        state = np.zeros((4, 80, 80))
-        next_state = np.zeros((4, 80, 80))
-        frame = env_info.vector_observations
+        state = np.zeros((4, 128, 72))
+        next_state = np.zeros((4, 128, 72))
         # keep track of frame for an episode
         frames = deque(maxlen=max_t)
         # take 4 random steps
@@ -102,27 +101,15 @@ def dqn(n_episodes,
                 break
         scores_window.append(score)       # save most recent score
         scores.append(score)              # save most recent score
-        eps = max(eps_end, eps_decay * eps)  # decrease epsilon
+        # eps = max(eps_end, eps_decay * eps)  # decrease epsilon
+        eps -= (eps_start - eps_end) / 50000
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(
             i_episode, np.mean(scores_window)), end="")
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(
                 i_episode, np.mean(scores_window)))
             torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
-        if np.mean(scores_window) >= 1000.0:
-            print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(
-                i_episode - 100, np.mean(scores_window)))
-            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
-            break
     env.close()
-    # training plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.grid()
-    ax.plot(np.arange(len(scores)), scores)
-    ax.set(xlabel="Episode #", ylabel="'Score",
-           title="Double Deep Q Network")
-    fig.savefig("DoubleDeepQNetwork.pdf")
 
 
 def trained_agent():
@@ -150,8 +137,8 @@ if __name__ == "__main__":
         description='Flappy Bird DQN')
 
     parser.add_argument('--n_episodes', metavar='', type=int,
-                        default=int(1e6), help='maximum number of training episodes')
-    parser.add_argument('--max_t', metavar='', type=int, default=int(1e6),
+                        default=100000, help='maximum number of training episodes')
+    parser.add_argument('--max_t', metavar='', type=int, default=100000,
                         help='maximum number of timesteps per episode')
     parser.add_argument('--eps_start', metavar='', type=float, default=1.0,
                         help='starting value of epsilon, for epsilon-greedy action selection')
@@ -162,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', metavar='', type=int,
                         default=0, help='seed for stochastic variables')
     parser.add_argument('--buffer_size', metavar='', type=int,
-                        default=int(1e6), help='replay buffer size')
+                        default=5000, help='replay buffer size')
     parser.add_argument('--batch_size', metavar='', type=int,
                         default=32, help='minibatch size')
     parser.add_argument('--gamma', metavar='', type=float,
@@ -170,9 +157,9 @@ if __name__ == "__main__":
     parser.add_argument('--tau', metavar='', type=float,
                         default=0, help='for soft update of target parameters')
     parser.add_argument('--lr', metavar='', type=float,
-                        default=1e-6, help='learning rate')
+                        default=1e-4, help='learning rate')
     parser.add_argument('--update_every', metavar='', type=int,
-                        default=1000, help='how often to update the network')
+                        default=4, help='how often to update the network')
     parser.add_argument('--train_test', metavar='', type=int,
                         default=0, help='0 to train and 1 to test agent')
     args = parser.parse_args()

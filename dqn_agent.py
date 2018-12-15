@@ -162,8 +162,8 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-        states = np.zeros((len(experiences), 4, 80, 80))
-        next_states = np.zeros((len(experiences), 4, 80, 80))
+        states = np.zeros((len(experiences), 4, 128, 72))
+        next_states = np.zeros((len(experiences), 4, 128, 72))
         for i, e in enumerate(experiences):
             if e is not None:
                 states[i, :, :, :] = e.state
